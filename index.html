@@ -1,6 +1,8 @@
 <head>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
     <script type="text/javascript" src="Blur.js"></script>
+    <script type="text/javascript" src="http://dat-gui.googlecode.com/git/build/dat.gui.min.js"></script>
+
 </head>
 
 <body>
@@ -10,10 +12,35 @@
 <canvas id="final" width="320", height="240"></canvas>
 <canvas id="mix" width="320", height="240" style="display: none"></canvas>
 
+<img id="out" src="">
+
 <div style="display: none">
     <input type="file" id="files" name="files[]" multiple />
     <output id="list"></output>
 </div>
+
+<script type="text/javascript">
+    
+var Options = function() {
+  this.blur = true;
+  this.filterSize = 5;
+  this.depthStepSize = 3;
+  //this.someBool = false;
+  //this.explode = function() {  };
+  
+};
+var options = new Options();
+
+window.onload = function() {
+  var gui = new dat.GUI();
+  gui.add(options, 'blur' );
+  gui.add(options, 'filterSize').min(1).max(10).step(1);
+  gui.add(options, 'depthStepSize').min(1).max(10).step(1);
+ // gui.add(text, 'displayOutline');
+ // gui.add(text, 'explode');
+};
+    
+</script>
 
 <script>
   function handleFileSelect(evt) {
@@ -39,7 +66,6 @@
     imd = new Image();
     imd.onload = imageLoaded;
 
-
     depth_fn = 'Depth_12.raw.bmp';
     imd.src = depth_fn;
     imd.canvas = "depth";
@@ -47,8 +73,8 @@
     im = new Image();
     im.onload = imageLoaded;
 
-    color_fn = 'Color_12.raw.bmp';
-    //color_fn = 'Color_3.png';
+    //color_fn = 'Color_12.raw.bmp';
+    color_fn = 'Color_3.png';
 
     im.src = color_fn;
     im.canvas = "color";
@@ -79,16 +105,16 @@ function mix(f) {
     depth_context = depth_canvas.getContext("2d");
     depthData = depth_context.getImageData(0, 0, width, height);
 
-for (y = 0; y < height; y++) {
+    for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++) {
-            idx = (x + y * width) * 4; // *4 for 4 ints per pixel
+            var idx = (x + y * width) * 4; // *4 for 4 ints per pixel
 
              for (j=1;j<3;j++)
              {
                     depthData.data[idx+j] = depthData.data[idx]; 
              }
+        }
     }
-}
 
     depth_context.putImageData(depthData, 0, 0);
 
@@ -109,12 +135,15 @@ for (y = 0; y < height; y++) {
     final_imageData = final_context.getImageData(0, 0, width, height);
 
 
-step = 3; //quantizing depth levels, higher number -> faster, less accurate
+step = options.depthStepSize; //quantizing depth levels, higher number -> faster, less accurate
+ 
+
+
 for (di = 255; di >= 0; di -= step) {
 
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++) {
-            idx = (x + y * width) * 4; // *4 for 4 ints per pixel
+            var idx = (x + y * width) * 4; // *4 for 4 ints per pixel
 
             r = colorData.data[idx+0];
             g = colorData.data[idx+1];
@@ -129,16 +158,19 @@ for (di = 255; di >= 0; di -= step) {
         }
     }
 
-    filterSize = Math.ceil(Math.abs(di - f) / 5);
-    if (filterSize > 0){
-        filterGaussBlurRGBA(imageData, filterSize);    
+
+    var fs = options.filterSize;
+
+    ddepth = Math.ceil(Math.abs(di - f) / fs);
+    if (ddepth > 0){
+        filterGaussBlurRGBA(imageData, ddepth);
     }
     
     context.putImageData(imageData, 0, 0);
 
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++) {
-            idx = (x + y * width) * 4; // *4 for 4 ints per pixel
+            var idx = (x + y * width) * 4; // *4 for 4 ints per pixel
 
             d = depthData.data[idx];
             if (d >= di && d < di+step)
@@ -154,20 +186,19 @@ for (di = 255; di >= 0; di -= step) {
 
     // put pixel data on canvas
     final_context.putImageData(final_imageData, 0, 0, 0, 0, final_canvas.width, final_canvas.height);
+    document.getElementById('out').src = final_canvas.toDataURL("image/png");
+
 }
 
 function canvasClick( e ){
-
     var x = e.offsetX;
     var y = e.offsetY;
-
 
     var idx = (x + y * width) * 4; // *4 for 4 ints per pixel
     var d = depthData.data[idx];
 
-    console.log(x, y, d);
+//    console.log(x, y, d);
     mix(d);
-
 }
 
 $(document).ready(function() {
