@@ -79,6 +79,21 @@ function mix(f) {
     depth_context = depth_canvas.getContext("2d");
     depthData = depth_context.getImageData(0, 0, width, height);
 
+for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++) {
+            idx = (x + y * width) * 4; // *4 for 4 ints per pixel
+
+             for (j=1;j<3;j++)
+             {
+                    depthData.data[idx+j] = depthData.data[idx]; 
+             }
+    }
+}
+
+    depth_context.putImageData(depthData, 0, 0);
+
+
+
     color_canvas = document.getElementById('color');
     color_context = color_canvas.getContext("2d");
     colorData = color_context.getImageData(0, 0, width, height);
@@ -115,7 +130,10 @@ for (di = 255; di >= 0; di -= step) {
     }
 
     filterSize = Math.ceil(Math.abs(di - f) / 5);
-    filterGaussBlurRGBA(imageData, filterSize + 1);
+    if (filterSize > 0){
+        filterGaussBlurRGBA(imageData, filterSize);    
+    }
+    
     context.putImageData(imageData, 0, 0);
 
     for (y = 0; y < height; y++) {
@@ -154,6 +172,7 @@ function canvasClick( e ){
 
 $(document).ready(function() {
     $("#color").bind( "mousedown", function(e){ canvasClick(e); } );
+    $("#final").bind( "mousedown", function(e){ canvasClick(e); } );
 });
 
 </script>
