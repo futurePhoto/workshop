@@ -24,22 +24,28 @@
 <script type="text/javascript">
     
 var Options = function() {
+  
+  this.mix = function() {mix();};
   this.blur = true;
   this.filterSize = 5;
   this.depthStepSize = 3;
+  this.depthFocus = 100;
   //this.someBool = false;
-  //this.explode = function() {  };
+  
   
 };
 var options = new Options();
 
 window.onload = function() {
   var gui = new dat.GUI();
-  gui.add(options, 'blur' );
-  gui.add(options, 'filterSize').min(1).max(10).step(1);
-  gui.add(options, 'depthStepSize').min(1).max(10).step(1);
+    gui.add(options, 'mix');
+    gui.add(options, 'blur' );
+    gui.add(options, 'depthFocus').min(0).max(255).step(1);
+  
+    gui.add(options, 'filterSize').min(1).max(10).step(1);
+    gui.add(options, 'depthStepSize').min(1).max(10).step(1);
  // gui.add(text, 'displayOutline');
- // gui.add(text, 'explode');
+ 
 };
     
 </script>
@@ -95,13 +101,13 @@ window.onload = function() {
         
         if (--n_images <= 0)
         {
-            mix(100);
+            mix();
         }
     }
 
 
 var depthData;
-function mix(f) {
+function mix() {
 
     depth_canvas = document.getElementById('depth');
     depth_context = depth_canvas.getContext("2d");
@@ -163,7 +169,7 @@ for (di = 255; di >= 0; di -= step) {
 
     var fs = options.filterSize;
 
-    ddepth = Math.ceil(Math.abs(di - f) / fs);
+    ddepth = Math.ceil(Math.abs(di - options.focus) / fs);
     if (ddepth > 0){
         filterGaussBlurRGBA(imageData, ddepth);
     }
@@ -198,9 +204,9 @@ function canvasClick( e ){
 
     var idx = (x + y * width) * 4; // *4 for 4 ints per pixel
     var d = depthData.data[idx];
-
+    options.focus = d;
 //    console.log(x, y, d);
-    mix(d);
+    mix();
 }
 
 $(document).ready(function() {
