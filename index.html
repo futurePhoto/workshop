@@ -24,15 +24,12 @@
 <script type="text/javascript">
     
 var Options = function() {
-  
   this.mix = function() {mix();};
   this.blur = true;
   this.filterSize = 5;
   this.depthStepSize = 3;
   this.depthFocus = 100;
   //this.someBool = false;
-  
-  
 };
 var options = new Options();
 
@@ -81,8 +78,8 @@ window.onload = function() {
     im = new Image();
     im.onload = imageLoaded;
 
-    //color_fn = 'Color_12.raw.bmp';
-    color_fn = 'Color_3.png';
+    color_fn = 'Color_12.raw.bmp';
+    //color_fn = 'Color_3.png';
 
     im.src = color_fn;
     im.canvas = "color";
@@ -142,8 +139,7 @@ function mix() {
     imageData = context.getImageData(0, 0, width, height);
     final_imageData = final_context.getImageData(0, 0, width, height);
 
-
-step = options.depthStepSize; //quantizing depth levels, higher number -> faster, less accurate
+    step = options.depthStepSize; //quantizing depth levels, higher number -> faster, less accurate
  
 
 
