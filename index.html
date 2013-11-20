@@ -1,105 +1,161 @@
-<html lang="en"><head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-       </head>
-    <body>
-        <canvas id="myCanvas" width="578" height="400"></canvas>
-        <canvas id="canvas" width="578" height="400"></canvas>
+<head>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script type="text/javascript" src="Blur.js"></script>
+</head>
+
+<body>
+    
+<canvas id="color" width="320", height="240"></canvas>
+<canvas id="depth" width="320", height="240"></canvas>
+<canvas id="final" width="320", height="240"></canvas>
+<canvas id="mix" width="320", height="240" style="display: none"></canvas>
+
+<div style="display: none">
+    <input type="file" id="files" name="files[]" multiple />
+    <output id="list"></output>
+</div>
+
+<script>
+  function handleFileSelect(evt) {
+    var files = evt.target.files; // FileList object
+
+    // files is a FileList of File objects. List some properties.
+    var output = [];
+    for (var i = 0, f; f = files[i]; i++) {
+      output.push('<li><strong>', escape(f.name), '</strong> (', f.type || 'n/a', ') - ',
+                  f.size, ' bytes, last modified: ',
+                  f.lastModifiedDate ? f.lastModifiedDate.toLocaleDateString() : 'n/a',
+                  '</li>');
+    }
+    document.getElementById('list').innerHTML = '<ul>' + output.join('') + '</ul>';
+  }
+
+  document.getElementById('files').addEventListener('change', handleFileSelect, false);
+</script>
 
 
-        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-        <script type="text/javascript" src="https://inspirit.github.io/jsfeat/js/jsfeat-min.js"></script>
-        <script type="text/javascript" src="https://inspirit.github.io/jsfeat/js/compatibility.js"></script>
-        <script type="text/javascript" src="https://inspirit.github.io/jsfeat/js/profiler.js"></script>
-        <script type="text/javascript" src="https://inspirit.github.io/jsfeat/js/dat.gui.min.js"></script>
+<script type="text/javascript">
 
-        <script type="text/javascript">
+    imd = new Image();
+    imd.onload = imageLoaded;
 
-        $(window).load(function() {
-          
-          
-            // lets do some fun
-//            var video = document.getElementById('webcam');
-            var canvas = document.getElementById('canvas');
 
-            var stat = new profiler();
+    depth_fn = 'Depth_12.raw.bmp';
+    imd.src = depth_fn;
+    imd.canvas = "depth";
 
-            var gui,options,ctx,canvasWidth,canvasHeight;
-            var img_u8;
+    im = new Image();
+    im.onload = imageLoaded;
 
-            var demo_opt = function(){
-                this.radius = 2;
-                this.sigma = 0;
+    color_fn = 'Color_12.raw.bmp';
+    //color_fn = 'Color_3.png';
+
+    im.src = color_fn;
+    im.canvas = "color";
+
+    var n_images = 2; //initial depth, color
+    function imageLoaded(ev) {
+        im = ev.target; // the image, assumed to be 200x200
+
+        canvas = document.getElementById(im.canvas);
+    
+        width = canvas.width;
+        height = canvas.height;
+
+        context = canvas.getContext("2d");
+        context.drawImage(im, 0, 0);
+        
+        if (--n_images <= 0)
+        {
+            mix(100);
+        }
+    }
+
+
+var depthData;
+function mix(f) {
+
+    depth_canvas = document.getElementById('depth');
+    depth_context = depth_canvas.getContext("2d");
+    depthData = depth_context.getImageData(0, 0, width, height);
+
+    color_canvas = document.getElementById('color');
+    color_context = color_canvas.getContext("2d");
+    colorData = color_context.getImageData(0, 0, width, height);
+
+    canvas = document.getElementById('mix');
+    context = canvas.getContext("2d");
+
+    final_canvas = document.getElementById('final');
+    final_context = final_canvas.getContext("2d");
+    
+    // get all canvas pixel data
+    imageData = context.getImageData(0, 0, width, height);
+    final_imageData = final_context.getImageData(0, 0, width, height);
+
+
+step = 3; //quantizing depth levels, higher number -> faster, less accurate
+for (di = 255; di >= 0; di -= step) {
+
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++) {
+            idx = (x + y * width) * 4; // *4 for 4 ints per pixel
+
+            r = colorData.data[idx+0];
+            g = colorData.data[idx+1];
+            b = colorData.data[idx+2];
+            a = colorData.data[idx+3];     // alpha
+
+            imageData.data[idx+0] = r;
+            imageData.data[idx+1] = g;
+            imageData.data[idx+2] = b;
+
+            imageData.data[idx+3] = 255;//(d <= di) ? 255 : 0;// - d*10;
+        }
+    }
+
+    filterSize = Math.ceil(Math.abs(di - f) / 5);
+    filterGaussBlurRGBA(imageData, filterSize + 1);
+    context.putImageData(imageData, 0, 0);
+
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++) {
+            idx = (x + y * width) * 4; // *4 for 4 ints per pixel
+
+            d = depthData.data[idx];
+            if (d >= di && d < di+step)
+            {
+                for (j=0;j<4;j++)
+                    final_imageData.data[idx+j] = imageData.data[idx+j]; 
             }
 
-            function demo_app() {
-                canvasWidth  = canvas.width;
-                canvasHeight = canvas.height;
-                ctx = canvas.getContext('2d');
+        }
+    }
 
-                ctx.fillStyle = "rgb(0,255,0)";
-                ctx.strokeStyle = "rgb(0,255,0)";
+}
 
-                img_u8 = new jsfeat.matrix_t(640, 480, jsfeat.U8_t | jsfeat.C1_t);
+    // put pixel data on canvas
+    final_context.putImageData(final_imageData, 0, 0, 0, 0, final_canvas.width, final_canvas.height);
+}
 
-                options = new demo_opt();
-                gui = new dat.GUI();
+function canvasClick( e ){
 
-                gui.add(options, 'radius', 1, 11).step(1);
-                gui.add(options, 'sigma', 0, 10).step(0.5);
-
-                stat.add("grayscale");
-                stat.add("gauss blur");
-            }          
-
-            demo_app();
+    var x = e.offsetX;
+    var y = e.offsetY;
 
 
-      var canvas = document.getElementById('myCanvas');
-      var context = canvas.getContext('2d');
-      var imageObj = new Image();
+    var idx = (x + y * width) * 4; // *4 for 4 ints per pixel
+    var d = depthData.data[idx];
 
-      imageObj.onload = function() {
-        context.drawImage(imageObj, 0, 0);
+    console.log(x, y, d);
+    mix(d);
 
-            var canvas = document.getElementById('canvas');
-                            ctx = canvas.getContext('2d');
-                            ctx.drawImage(imageObj, 0, 0);
-//                compatibility.requestAnimationFrame(tick);
-                stat.new_frame();
-//                if (video.readyState === video.HAVE_ENOUGH_DATA) {
-//		            ctx.drawImage(imageObj, 0, 0, 640, 480);
-                   ctx = canvas.getContext('2d');
-			      var imageData = ctx.getImageData(0, 0, 578, 400);
+}
 
-                    stat.start("grayscale");
-                    jsfeat.imgproc.grayscale(imageData.data, img_u8.data);
-                    stat.stop("grayscale");
+$(document).ready(function() {
+    $("#color").bind( "mousedown", function(e){ canvasClick(e); } );
+});
 
-                    var r = options.radius|0;
-                    var kernel_size = (r+1) << 1;
+</script>
 
-                    stat.start("gauss blur");
-                    jsfeat.imgproc.gaussian_blur(img_u8, img_u8, kernel_size, options.sigma);
-                    stat.stop("gauss blur");
-
-                    // render result back to canvas
-                    var data_u32 = new Uint32Array(imageData.data.buffer);
-                    var alpha = (0xff << 24);
-                    var i = img_u8.cols*img_u8.rows, pix = 0;
-                    while(--i >= 0) {
-                        pix = img_u8.data[i];
-                        data_u32[i] = alpha | (pix << 16) | (pix << 8) | pix;
-                    }
-                    
-                    ctx.putImageData(imageData, 0, 0);
-
-                    $('#log').html(stat.log());
-                
-       	      };
-
-	    imageObj.src = 'darth-vader.jpg';
-        });
-        </script>
-    
-</body></html>
+</body>
