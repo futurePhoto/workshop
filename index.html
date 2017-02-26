@@ -6,23 +6,52 @@
 </head>
 
 <body>
-    
-<canvas id="color" width="320", height="240"></canvas>
-<canvas id="depth" width="320", height="240"></canvas>
+
+<table>
+
+<table border="0">
+<tr>
+    <th>Color</th>
+    <th>Depth</th>
+    <th>Result</th>
+</tr>
+<tr>
+    <td>
+        <canvas id="color" width="320", height="240"></canvas>
+    </td>
+    <td>
+        <canvas id="depth" width="320", height="240"></canvas>
+    </td>
+    <td>
+        <img id="out" src="">
+    </td>
+</tr>
+<tr>
+    <td>
+
+<form name="frm1" action='#' onsubmit="greeting(); return false;">
+<input type="text" name="fname">
+<input type="button" value="Submit">
+</form>
+
+    </td>
+    <td>
+    </td>
+</tr>
+</table>
+
 <canvas id="final" width="320", height="240" style="display: none"></canvas>
 <canvas id="mix" width="320", height="240" style="display: none"></canvas>
 
-<div>
-<img id="out" src="">
-</div>
-
-<div style="display: none">
-    <input type="file" id="files" name="files[]" multiple />
-    <output id="list"></output>
-</div>
-
 <script type="text/javascript">
     
+function greeting()
+{
+    var fn = document.forms["frm1"]["fname"].value;
+    im.src = fn;
+}
+
+
 var Options = function() {
   this.mix = function() {mix();};
   this.blur = true;
@@ -45,24 +74,6 @@ window.onload = function() {
  
 };
     
-</script>
-
-<script>
-  function handleFileSelect(evt) {
-    var files = evt.target.files; // FileList object
-
-    // files is a FileList of File objects. List some properties.
-    var output = [];
-    for (var i = 0, f; f = files[i]; i++) {
-      output.push('<li><strong>', escape(f.name), '</strong> (', f.type || 'n/a', ') - ',
-                  f.size, ' bytes, last modified: ',
-                  f.lastModifiedDate ? f.lastModifiedDate.toLocaleDateString() : 'n/a',
-                  '</li>');
-    }
-    document.getElementById('list').innerHTML = '<ul>' + output.join('') + '</ul>';
-  }
-
-  document.getElementById('files').addEventListener('change', handleFileSelect, false);
 </script>
 
 
